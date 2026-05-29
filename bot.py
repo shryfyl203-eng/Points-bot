@@ -12,9 +12,9 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ================== ⚠️ جاهایی که باید جایگزین کنی ⚠️ ==================
 
-TOKEN = os.getenv("MTUwOTE0NDU5MzM5OTE1Njc3OA.G8ykWp.k7hTgQpnvSX8kElC3hfLAD_-Ig7o__Q7EIL4_E")                    # *** این را دست نزن ***
+TOKEN = os.getenv("DISCORD_TOKEN")                    # *** این را دست نزن ***
 
-TARGET_BOT_ID = int(os.getenv("725721249652670555", "0")) # *** آیدی بات رقیب را در Railway وارد کن ***
+TARGET_BOT_ID = int(os.getenv("TARGET_BOT_ID", "0")) # *** آیدی بات رقیب را در Railway وارد کن ***
 
 POINTS_PER_MENTION = int(os.getenv("POINTS_PER_MENTION", 10))  # *** امتیاز هر منشن (پیش‌فرض ۱۰) ***
 
@@ -115,4 +115,4 @@ async def add_manual_points(ctx, member: discord.Member, amount: int):
 
 
 # ================== اجرای بات ==================
-bot.run(MTUwOTE0NDU5MzM5OTE1Njc3OA.G8ykWp.k7hTgQpnvSX8kElC3hfLAD_-Ig7o__Q7EIL4_E)
+bot.run(TOKEN)
