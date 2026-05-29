@@ -54,16 +54,17 @@ async def on_ready():
 
 @bot.event
 async def on_message(message: discord.Message):
-    if message.author.id != TARGET_BOT_ID:
-        return
-    if not message.mentions:
-        return
+    if message.author.bot and message.author.id != TARGET_BOT_ID:
+        return  # Ignore other bots
 
-    count = len(message.mentions)
-    for user in message.mentions:
-        await add_points(str(user.id), user.name)
-    
-    print(f"✅ {count} user(s) were mentioned and received points.")
+    # If it's the target bot's message → add points
+    if message.author.id == TARGET_BOT_ID and message.mentions:
+        count = len(message.mentions)
+        for user in message.mentions:
+            await add_points(str(user.id), user.name)
+        print(f"✅ {count} user(s) received {POINTS_PER_MENTION} points.")
+
+    # Always process user commands
     await bot.process_commands(message)
 
 # ================== Commands ==================
@@ -106,5 +107,5 @@ async def add_manual_points(ctx, member: discord.Member, amount: int):
     await ctx.send(f"✅ Added **{amount}** points to {member.mention}.")
 
 
-# ================== Run the bot ==================
+# ================== Run ==================
 bot.run(TOKEN)
