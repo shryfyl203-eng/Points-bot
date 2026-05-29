@@ -54,18 +54,20 @@ async def on_ready():
 
 @bot.event
 async def on_message(message: discord.Message):
+    # Don't ignore user messages
     if message.author.bot and message.author.id != TARGET_BOT_ID:
-        return  # Ignore other bots
+        return
 
-    # If it's the target bot's message → add points
+    # Add points if it's from the target bot
     if message.author.id == TARGET_BOT_ID and message.mentions:
         count = len(message.mentions)
         for user in message.mentions:
             await add_points(str(user.id), user.name)
         print(f"✅ {count} user(s) received {POINTS_PER_MENTION} points.")
 
-    # Always process user commands
-    await bot.process_commands(message)
+    # VERY IMPORTANT: Always process commands from users
+    if not message.author.bot:
+        await bot.process_commands(message)
 
 # ================== Commands ==================
 @bot.command(name="points")
