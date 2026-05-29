@@ -9,22 +9,16 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ================== چک کردن متغیرها ==================
+# ================== Settings ==================
 TOKEN = os.getenv("DISCORD_TOKEN")
 TARGET_BOT_ID = int(os.getenv("TARGET_BOT_ID", "0"))
 POINTS_PER_MENTION = int(os.getenv("POINTS_PER_MENTION", 10))
 
-print("🔍 Debugging Variables:")
-print(f"DISCORD_TOKEN exists: {bool(TOKEN)}")
-print(f"TARGET_BOT_ID: {TARGET_BOT_ID}")
-print(f"POINTS_PER_MENTION: {POINTS_PER_MENTION}")
-
-if not TOKEN:
-    print("❌ توکن پیدا نشد! لطفاً Variable را دوباره چک کنید.")
-    print("نام Variable باید دقیقاً DISCORD_TOKEN باشد")
+if not TOKEN or TARGET_BOT_ID == 0:
+    print("❌ Missing configuration!")
     exit(1)
 
-# ================== بقیه کد (همان قبلی) ==================
+# ================== Database ==================
 async def init_db():
     async with aiosqlite.connect("points.db") as db:
         await db.execute("""
@@ -50,10 +44,13 @@ async def add_points(user_id: str, username: str, amount: int = POINTS_PER_MENTI
               amount, username, datetime.now().strftime("%Y-%m-%d %H:%M")))
         await db.commit()
 
+# ================== Events ==================
 @bot.event
 async def on_ready():
     await init_db()
-    print(f"✅ بات {bot.user} با موفقیت آنلاین شد!")
+    print(f"✅ Bot {bot.user} is now online!")
+    print(f"🎯 Target Bot ID: {TARGET_BOT_ID}")
+    print(f"⭐ Points per mention: {POINTS_PER_MENTION}")
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -62,32 +59,52 @@ async def on_message(message: discord.Message):
     if not message.mentions:
         return
 
+    count = len(message.mentions)
     for user in message.mentions:
         await add_points(str(user.id), user.name)
     
-    print(f"✅ {len(message.mentions)} نفر امتیاز گرفتند.")
+    print(f"✅ {count} user(s) were mentioned and received points.")
     await bot.process_commands(message)
 
-# دستورات (امتیاز، لیدربورد، اضافه) همان قبلی هستند...
-@bot.command(name="امتیاز")
+# ================== Commands ==================
+@bot.command(name="points")
 async def show_points(ctx, member: discord.Member = None):
-    if member is None: member = ctx.author
+    if member is None:
+        member = ctx.author
+    
     async with aiosqlite.connect("points.db") as db:
         async with db.execute("SELECT points FROM users WHERE user_id = ?", (str(member.id),)) as cursor:
             row = await cursor.fetchone()
             points = row[0] if row else 0
-    await ctx.send(f"**{member.mention}** دارای **{points}** امتیاز است.")
+    
+    await ctx.send(f"**{member.mention}** has **{points}** points.")
 
-@bot.command(name="لیدربورد", aliases=["رتبه", "leaderboard"])
+
+@bot.command(name="leaderboard", aliases=["lb", "top"])
 async def leaderboard(ctx):
     async with aiosqlite.connect("points.db") as db:
-        async with db.execute("SELECT username, points FROM users ORDER BY points DESC LIMIT 15") as cursor:
+        async with db.execute("""
+            SELECT username, points FROM users 
+            ORDER BY points DESC LIMIT 15
+        """) as cursor:
             data = await cursor.fetchall()
+    
     if not data:
-        return await ctx.send("هنوز امتیازی ثبت نشده.")
-    embed = discord.Embed(title="🏆 لیدربورد امتیازات", color=0x00ff00)
+        return await ctx.send("No points have been recorded yet.")
+    
+    embed = discord.Embed(title="🏆 Points Leaderboard", color=0x00ff00)
     for i, (username, points) in enumerate(data, 1):
-        embed.add_field(name=f"#{i} • {username}", value=f"**{points}** امتیاز", inline=False)
+        embed.add_field(name=f"#{i} • {username}", value=f"**{points}** points", inline=False)
+    
     await ctx.send(embed=embed)
 
+
+@bot.command(name="addpoints")
+@commands.has_permissions(administrator=True)
+async def add_manual_points(ctx, member: discord.Member, amount: int):
+    await add_points(str(member.id), member.name, amount)
+    await ctx.send(f"✅ Added **{amount}** points to {member.mention}.")
+
+
+# ================== Run the bot ==================
 bot.run(TOKEN)
